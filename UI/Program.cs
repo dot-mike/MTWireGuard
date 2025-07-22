@@ -17,7 +17,15 @@ internal class Program
         {
             Console.WriteLine("MTWireGuard - Starting...");
 
+            // Load .env file before any other initialization
+            var root = Directory.GetCurrentDirectory();
+            var dotenv = Path.Combine(root, ".env");
+            MTWireGuard.Application.Utils.DotEnv.Load(dotenv);
+
             var builder = WebApplication.CreateBuilder(args);
+            
+            // Explicitly add environment variables to configuration
+            builder.Configuration.AddEnvironmentVariables();
             
             // Configure services
             ConfigureServices(builder);
