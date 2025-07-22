@@ -11,12 +11,12 @@ namespace MTWireGuard.Application
 {
     public class SetupValidator(IServiceProvider serviceProvider)
     {
-        private IMikrotikRepository api;
-        private ILogger logger;
+        private IMikrotikRepository? api;
+        private ILogger? logger;
 
         public static bool IsValid { get; private set; }
-        public static string Title { get; private set; }
-        public static string Description { get; private set; }
+        public static string? Title { get; private set; }
+        public static string? Description { get; private set; }
 
         public async Task<bool> Validate()
         {
@@ -39,18 +39,7 @@ namespace MTWireGuard.Application
             var (apiConnection, apiConnectionMessage) = await ValidateAPIConnection();
             if (!apiConnection)
             {
-                /*var MT_IP = Environment.GetEnvironmentVariable("MT_IP");
-                var ping = new Ping();
-                var reply = ping.Send(MT_IP, 60 * 1000);
-                if (reply.Status == IPStatus.Success)
-                {
-                    LogAndDisplayError("Error connecting to the router api!", apiConnectionMessage);
-                }
-                else
-                {
-                    LogAndDisplayError("Error connecting to the router api!", $"Can't find Mikrotik API server at address: {MT_IP}\r\nping status: {reply.Status}");
-                }*/
-                LogAndDisplayError("Error connecting to the router api!", apiConnectionMessage);
+                LogAndDisplayError("Error connecting to the router api!", apiConnectionMessage ?? "Unknown error");
                 IsValid = false;
                 return false;
             }
@@ -63,7 +52,7 @@ namespace MTWireGuard.Application
                 return false;
             }
 
-            if (!await api.TryConnectAsync())
+            if (api != null && !await api.TryConnectAsync())
             {
                 LogAndDisplayError("Error connecting to the router api!", "Connecting to API failed.");
                 IsValid = false;
@@ -90,7 +79,7 @@ namespace MTWireGuard.Application
         {
             try
             {
-                return (await api.TryConnectAsync(), string.Empty);
+                return api != null ? (await api.TryConnectAsync(), string.Empty) : (false, "API not initialized");
             }
             catch (Exception ex)
             {
@@ -104,11 +93,12 @@ namespace MTWireGuard.Application
             {
                 var name = System.Net.Dns.GetHostName();
                 var port = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS");
-                return System.Net.Dns.GetHostEntry(name).AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork).ToString() + $":{port}";
+                var address = System.Net.Dns.GetHostEntry(name).AddressList.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+                return address != null ? $"{address}:{port}" : string.Empty;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Error getting container IP address.");
+                logger?.Error(ex, "Error getting container IP address.");
                 return string.Empty;
             }
         }
@@ -122,20 +112,22 @@ namespace MTWireGuard.Application
             Console.WriteLine($"[-] {Title}");
             Console.WriteLine($"[!] {Description}");
             Console.ResetColor();
-            logger.Error("Error in container configuration", new { Error = Title, Description });
+            logger?.Error("Error in container configuration", new { Error = Title, Description });
         }
 
         private void InitializeServices()
         {
             var dbContext = serviceProvider.GetService<DBContext>();
-            dbContext.Database.Migrate();
-            dbContext.Database.EnsureCreated();
+            dbContext?.Database.Migrate();
+            dbContext?.Database.EnsureCreated();
             api = serviceProvider.GetService<IMikrotikRepository>();
             logger = serviceProvider.GetService<ILogger>();
         }
 
         private async Task EnsureTrafficScripts(string ip)
         {
+            if (api == null) return;
+            
             var scripts = await api.GetScripts();
             var schedulers = await api.GetSchedulers();
 
@@ -150,7 +142,7 @@ namespace MTWireGuard.Application
                     Comment = "Update wireguard peers traffic usage"
                 });
                 var result = create.Code;
-                logger.Information("Created TrafficUsage Scheduler", new
+                logger?.Information("Created TrafficUsage Scheduler", new
                 {
                     result = create
                 });
