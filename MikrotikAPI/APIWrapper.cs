@@ -160,41 +160,43 @@ namespace MikrotikAPI
         {
             try
             {
-                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Starting authentication validation");
+                if (IsVerboseLoggingEnabled)
+                {
+                    Console.WriteLine("[MikrotikAPI] Validating MikroTik connection and authentication...");
+                }
+                
+                // Use shorter timeout for startup validation (10 seconds)
+                var validationTimeout = TimeSpan.FromSeconds(10);
                 
                 // First test basic connectivity without authentication
-                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Testing basic connectivity to /rest/");
-                var connectionTest = await SendGetRequestAsync(Endpoints.Empty, true);
+                var connectionTest = await SendGetRequestAsync(Endpoints.Empty, true, validationTimeout);
                 var loginStatus = connectionTest.ToModel<LoginStatus>();
-                Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Basic connectivity response: {connectionTest}");
                 
                 if (loginStatus?.Error == 404)
                 {
-                    Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Router not found (404)");
                     return (false, $"MikroTik router not found at {MT_IP}. Please check the MT_IP environment variable.");
                 }
                 
                 // Now test with authentication using system/resource endpoint (requires authentication)
-                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Testing authentication with /rest/system/resource");
-                var authTest = await SendGetRequestAsync(Endpoints.SystemResource);
-                Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Auth test response: {authTest}");
+                var authTest = await SendGetRequestAsync(Endpoints.SystemResource, false, validationTimeout);
                 
                 // Check if response contains an error
                 if (authTest.Contains("\"error\":401") && authTest.Contains("\"message\":\"Unauthorized\""))
                 {
-                    Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: 401 Unauthorized detected - RETURNING FALSE");
                     return (false, $"Authentication failed. Username '{MT_USER}' or password is incorrect. Please check MT_USER and MT_PASS environment variables.");
                 }
                 
                 if (authTest.Contains("\"error\":"))
                 {
                     var errorStatus = authTest.ToModel<LoginStatus>();
-                    Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Other error detected: {errorStatus?.Error} - {errorStatus?.Message}");
                     return (false, $"MikroTik API error: [{errorStatus?.Error}] {errorStatus?.Message}");
                 }
                 
                 // If we get here and the response doesn't contain an error, authentication was successful
-                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Authentication successful - RETURNING TRUE");
+                if (IsVerboseLoggingEnabled)
+                {
+                    Console.WriteLine("[MikrotikAPI] MikroTik connection and authentication validated successfully");
+                }
                 return (true, "Authentication successful");
             }
             catch (HttpRequestException ex)
@@ -538,7 +540,7 @@ namespace MikrotikAPI
             };
         }
 
-        private async Task<string> SendRequestBase(RequestMethod Method, string Endpoint, object? Data = null, bool IsTest = false)
+        private async Task<string> SendRequestBase(RequestMethod Method, string Endpoint, object? Data = null, bool IsTest = false, TimeSpan? timeout = null)
         {
             var stopwatch = Stopwatch.StartNew();
             HttpClientHandler handler = new()
@@ -549,6 +551,12 @@ namespace MikrotikAPI
             try
             {
                 using HttpClient httpClient = new(handler);
+                
+                // Set timeout for startup validation (shorter) or use default
+                if (timeout.HasValue)
+                {
+                    httpClient.Timeout = timeout.Value;
+                }
                 
                 // Use SSL (https) on port 443 if MT_API_SSL is true, otherwise use http on port 80
                 string protocol = MT_API_SSL ? "https" : "http";
@@ -642,9 +650,9 @@ namespace MikrotikAPI
             }
         }
 
-        private async Task<string> SendGetRequestAsync(string URL, bool IsTest = false)
+        private async Task<string> SendGetRequestAsync(string URL, bool IsTest = false, TimeSpan? timeout = null)
         {
-            return await SendRequestBase(RequestMethod.GET, URL, IsTest: IsTest);
+            return await SendRequestBase(RequestMethod.GET, URL, IsTest: IsTest, timeout: timeout);
         }
 
         private async Task<string> SendPostRequestAsync(string URL, string Data)
