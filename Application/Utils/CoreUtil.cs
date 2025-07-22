@@ -34,7 +34,21 @@ namespace MTWireGuard.Application.Utils
         /// <returns></returns>
         public static Serilog.Core.Logger LoggerConfiguration()
         {
+            var loggingMode = Environment.GetEnvironmentVariable("LOGGING_MODE")?.ToLowerInvariant() ?? "info";
+            
+            var minimumLevel = loggingMode switch
+            {
+                "debug" => LogEventLevel.Debug,
+                "verbose" => LogEventLevel.Verbose,
+                "info" => LogEventLevel.Information,
+                "warning" => LogEventLevel.Warning,
+                "error" => LogEventLevel.Error,
+                "fatal" => LogEventLevel.Fatal,
+                _ => LogEventLevel.Information
+            };
+
             return new LoggerConfiguration()
+                .MinimumLevel.Is(minimumLevel)
                 .Enrich.WithExceptionDetails(new DestructuringOptionsBuilder()
                     .WithDefaultDestructurers()
                     .WithRootName("Message").WithRootName("Exception").WithRootName("Exception"))
@@ -44,9 +58,9 @@ namespace MTWireGuard.Application.Utils
                     prefix: "Log.Source_",
                     filePathDepth: 10)
                 .Enrich.WithProperty("App.Version", GetProjectVersion())
+                .Enrich.WithProperty("LoggingMode", loggingMode)
                 .Enrich.WithMachineName()
                 .Enrich.WithEnvironmentUserName()
-                .Enrich.WithClientId(GetIDContent())
                 .WriteTo.Logger(lc => lc
                     .Filter.ByExcluding(AspNetCoreRequestLogging())
                     .WriteTo.SQLite(GetLogPath("logs.db")))

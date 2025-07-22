@@ -89,11 +89,55 @@ namespace MTWireGuard.Application
         {
             try
             {
-                return api != null ? (await api.TryConnectAsync(), string.Empty) : (false, "API not initialized");
+                if (api == null)
+                {
+                    return (false, "API not initialized");
+                }
+                
+                bool result = await api.TryConnectAsync();
+                return (result, string.Empty);
             }
             catch (Exception ex)
             {
-                return (false, ex.Message);
+                // Get environment variables for better error messaging
+                string? mtIP = Environment.GetEnvironmentVariable("MT_IP");
+                string? mtUser = Environment.GetEnvironmentVariable("MT_USER");
+                string? mtSSL = Environment.GetEnvironmentVariable("MT_API_SSL");
+                bool useSSL = bool.TryParse(mtSSL, out bool ssl) && ssl;
+                string protocol = useSSL ? "https" : "http";
+                string port = useSSL ? "443" : "80";
+                
+                // Build a comprehensive error message with troubleshooting steps
+                var errorMessage = $"MikroTik API Connection Failed:\n{ex.Message}\n\n";
+                errorMessage += "Troubleshooting Steps:\n";
+                errorMessage += $"1. Verify the router is reachable at {mtIP}\n";
+                errorMessage += $"2. Test connectivity with curl:\n";
+                errorMessage += $"   curl -k -u {mtUser}:<password> {protocol}://{mtIP}:{port}/rest/system/resource\n\n";
+                errorMessage += "3. Check these environment variables:\n";
+                errorMessage += $"   - MT_IP: {mtIP}\n";
+                errorMessage += $"   - MT_USER: {mtUser}\n";
+                errorMessage += $"   - MT_PASS: <check if set correctly>\n";
+                errorMessage += $"   - MT_API_SSL: {mtSSL} (using {protocol})\n\n";
+                errorMessage += "4. Ensure the MikroTik user has API access permissions\n";
+                errorMessage += "5. Verify the REST API is enabled on the MikroTik router";
+                
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $"\n\nInner Exception: {ex.InnerException.Message}";
+                }
+                
+                if (ex.InnerException?.InnerException != null)
+                {
+                    errorMessage += $"\nRoot Cause: {ex.InnerException.InnerException.Message}";
+                }
+                
+                // Add stack trace for SSL-related errors
+                if (ex.Message.Contains("SSL") || ex.Message.Contains("certificate") || ex.Message.Contains("TLS"))
+                {
+                    errorMessage += $"\n\nFull Stack Trace:\n{ex.StackTrace}";
+                }
+                
+                return (false, errorMessage);
             }
         }
 
