@@ -73,9 +73,6 @@ namespace MTWireGuard.Application.Utils
                         rollingInterval: RollingInterval.Day,
                         retainedFileCountLimit: 31
                     ))
-                .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly(LogEvent => LogEvent.Exception != null)
-                    .WriteTo.Seq("https://mtwglogger.techgarage.ir/"))
                 .CreateLogger();
         }
 
