@@ -31,7 +31,7 @@ namespace MTWireGuard.Application
 
             if (ValidateEnvironmentVariables())
             {
-                LogAndDisplayError("Environment variables are not set!", "Please set \"MT_IP\", \"MT_USER\", \"MT_PASS\", \"MT_PUBLIC_IP\" variables in container environment.");
+                LogAndDisplayError("Environment variables are not set!", "Please set \"MT_IP\", \"MT_USER\", \"MT_PASS\", \"MT_PUBLIC_IP\" variables in container environment. Optional: Set \"GUI_ADMIN_USER\" and \"GUI_ADMIN_PASS\" for separate web interface login (defaults to admin/admin).");
                 IsValid = false;
                 return false;
             }
@@ -71,8 +71,18 @@ namespace MTWireGuard.Application
             string? USER = Environment.GetEnvironmentVariable("MT_USER");
             string? PASS = Environment.GetEnvironmentVariable("MT_PASS");
             string? PUBLICIP = Environment.GetEnvironmentVariable("MT_PUBLIC_IP");
+            string? GUI_USER = Environment.GetEnvironmentVariable("GUI_ADMIN_USER");
+            string? GUI_PASS = Environment.GetEnvironmentVariable("GUI_ADMIN_PASS");
 
-            return string.IsNullOrEmpty(IP) || string.IsNullOrEmpty(USER) || string.IsNullOrEmpty(PUBLICIP);
+            bool missingMikrotikVars = string.IsNullOrEmpty(IP) || string.IsNullOrEmpty(USER) || string.IsNullOrEmpty(PUBLICIP);
+            bool missingGuiVars = string.IsNullOrEmpty(GUI_USER) || string.IsNullOrEmpty(GUI_PASS);
+            
+            if (missingGuiVars)
+            {
+                Console.WriteLine("Warning: GUI_ADMIN_USER and GUI_ADMIN_PASS not set. Using defaults: admin/admin");
+            }
+            
+            return missingMikrotikVars;
         }
 
         private async Task<(bool status, string? message)> ValidateAPIConnection()
