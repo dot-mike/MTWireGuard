@@ -20,6 +20,8 @@ Before running MTWireGuard, you need to configure these essential environment va
 | `MT_USER` | Mikrotik username | `admin` | ✅ |
 | `MT_PASS` | Mikrotik password | `your_password` | ✅ |
 | `MT_PUBLIC_IP` | Your public IP/domain | `your.public.ip` | ✅ |
+| `GUI_ADMIN_USER` | Admin username for web interface | `admin` | ✅ |
+| `GUI_ADMIN_PASS` | Admin password for web interface | `admin123` | ✅ |
 | `MT_API_SSL` | Enable SSL for Mikrotik API | `true` or `false` | ❌ |
 | `ASPNETCORE_ENVIRONMENT` | Application environment | `Production` | ❌ |
 | `DATA_PATH` | Data directory path | `/data` | ❌ |
@@ -42,6 +44,8 @@ services:
       - MT_USER=admin
       - MT_PASS=your_password
       - MT_PUBLIC_IP=your.public.ip
+      - GUI_ADMIN_USER=admin
+      - GUI_ADMIN_PASS=admin123
       - MT_API_SSL=false
       - ASPNETCORE_ENVIRONMENT=Production
       - DATA_PATH=/data
@@ -171,6 +175,8 @@ docker run -d \
   -e MT_USER=admin \
   -e MT_PASS=your_password \
   -e MT_PUBLIC_IP=your.public.ip \
+  -e GUI_ADMIN_USER=admin \
+  -e GUI_ADMIN_PASS=admin123 \
   -e ASPNETCORE_ENVIRONMENT=Development \
   -v mtwireguard_data:/data \
   mtwireguard:dev
@@ -194,6 +200,8 @@ export MT_IP=192.168.1.1
 export MT_USER=admin
 export MT_PASS=your_password
 export MT_PUBLIC_IP=your.public.ip
+export GUI_ADMIN_USER=admin
+export GUI_ADMIN_PASS=admin123
 export ASPNETCORE_ENVIRONMENT=Development
 
 # Run the application
