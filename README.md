@@ -54,19 +54,22 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![MTWireguard screenshot][product-screenshot]](https://github.com/dot-mike/MTWireGuard)
-
-This is the first and most **Stable** and **Secure** Accounting system built to manage Wireguard interface on Mikrotik (CHR and devices). You can easily make a Virtual Private Network based on Wireguard protocol in your RouterOS device.
+This a simple web application to manage Wireguard interface on Mikrotik devices (RouterOS 7.15+). It provides a user-friendly interface to create, edit, and delete Wireguard peers, as well as manage their configurations and settings.
 
 Here's why:
 * Ability to install on RouterOS itself (using Docker)
 * Compatible with future RouterOS updates
 * Storing all your data on your own server
 
+This is a forked version of [MTWireGuard](https://github.com/techgarage-ir/MTWireGuard) by [techgarage-ir](https://github.com/techgarage-ir). This version enhances the original project with :
+- Dedicated admin credentials
+- Fixed support for non SSL connections (port 80)
+- Improved error handling and logging
+- Reverse proxy support for production deployments
+
 > **Disclaimer:** This project is only for education. Do not use it for illegal purposes.<br>Any illegal usage of this software is solely the responsibility of the user. The creators and contributors of this project aren't liable for any misuse or damages caused by improper usage of this software.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
+[![MTWireguard screenshot][product-screenshot]](https://github.com/dot-mike/MTWireGuard)
 
 ### Built With
 
