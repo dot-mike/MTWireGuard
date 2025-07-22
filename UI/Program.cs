@@ -47,14 +47,10 @@ internal class Program
 
             // Configure middleware pipeline
             ConfigureMiddleware(app);
-
-            // Display startup complete message
-            var urls = app.Configuration["ASPNETCORE_HTTP_PORTS"]?.Split(';')
-                .Select(port => $"http://localhost:{port}")
-                .FirstOrDefault() ?? "http://localhost:8080";
-                
-            Console.WriteLine($"Application started successfully at: {urls}");
-
+            
+            // Configure application lifetime events
+            ConfigureApplicationLifetime(app);
+            
             // Start the application
             await app.RunAsync();
             
@@ -92,6 +88,35 @@ internal class Program
         builder.Services.AddApplicationServices();
 
         builder.Host.UseSerilog(CoreUtil.LoggerConfiguration());
+    }
+
+    private static void ConfigureApplicationLifetime(WebApplication app)
+    {
+        var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+        var logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+        
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            var urls = app.Configuration["ASPNETCORE_HTTP_PORTS"]?.Split(';')
+                .Select(port => $"http://localhost:{port}")
+                .FirstOrDefault() ?? "http://localhost:8080";
+                
+            Console.WriteLine($"Application started successfully at: {urls}");
+            logger.LogInformation("Application started successfully at: {Url}", urls);
+        });
+        
+        lifetime.ApplicationStopping.Register(() =>
+        {
+            Console.WriteLine("Application is shutting down...");
+            logger.LogInformation("Application shutdown initiated");
+        });
+        
+        lifetime.ApplicationStopped.Register(() =>
+        {
+            Console.WriteLine("Application stopped gracefully.");
+            logger.LogInformation("Application stopped gracefully");
+            Log.CloseAndFlush();
+        });
     }
 
     private static void ConfigureMiddleware(WebApplication app)
@@ -161,7 +186,5 @@ internal class Program
             options.WithAuthenticationType(Serilog.Ui.Web.Models.AuthenticationType.Custom);
             options.EnableAuthorizationOnAppRoutes();
         });
-
-        app.Run();
     }
 }
