@@ -169,7 +169,7 @@ namespace MTWireGuard.Application.MinimalAPI
         {
             try
             {
-                var url = "https://api.github.com/repos/techgarage-ir/MTWireguard/tags";
+                var url = "https://api.github.com/repos/dot-mike/MTWireguard/tags";
                 var currentVersionString = CoreUtil.GetProjectVersion();
                 using var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", $"MTWireguard ${currentVersionString}");

@@ -397,7 +397,7 @@ The application stores data in SQLite database and configuration files. Make sur
 
 - [SSL Configuration Guide](docs/ssl-configuration.md)
 - [Reverse Proxy Setup Guide](docs/reverse-proxy-setup.md)
-- [Project Wiki](https://github.com/techgarage-ir/MTWireGuard/wiki)
+- [Project Wiki](https://github.com/dot-mike/MTWireGuard/wiki)
 - [Report Issues](https://github.com/dot-mike/MTWireGuard/issues)
 
 ## 📄 License
