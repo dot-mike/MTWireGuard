@@ -28,22 +28,6 @@ namespace MTWireGuard.Application.Utils
         /// <returns></returns>
         public static string GetLogPath(string filename) => Path.Join(Constants.DataPath(), "logs", filename);
 
-        public static string GetIDFile() => Constants.DataPath("identifier.id");
-        public static string GetIDContent()
-        {
-            var idFile = GetIDFile();
-
-            if (!File.Exists(idFile))
-            {
-                using var fs = File.OpenWrite(idFile);
-                var id = Guid.NewGuid().ToString();
-                id = id[(id.LastIndexOf('-') + 1)..];
-                byte[] identifier = new UTF8Encoding(true).GetBytes(id);
-                fs.Write(identifier, 0, identifier.Length);
-            }
-            return File.ReadAllText(idFile);
-        }
-
         /// <summary>
         /// Serilog configuration
         /// </summary>
