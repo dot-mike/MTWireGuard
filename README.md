@@ -122,6 +122,24 @@ _As of this project is based on docker, you can install on any OS that can run d
 #### Method 2
 Installing on VPS using docker
 
+#### Method 3
+**Reverse Proxy Setup with TLS (Caddy/nginx/Traefik)**
+
+MTWireGuard supports running behind reverse proxies with TLS termination. This is recommended for production deployments.
+
+See the [Reverse Proxy Setup Guide](docs/reverse-proxy-setup.md) for detailed configuration examples with:
+- Caddy
+- nginx  
+- Traefik
+
+Quick start with reverse proxy:
+```bash
+# Use the reverse proxy docker-compose template
+cp docker-compose.reverse-proxy.yml docker-compose.yml
+# Edit the configuration for your environment
+docker-compose up -d
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 

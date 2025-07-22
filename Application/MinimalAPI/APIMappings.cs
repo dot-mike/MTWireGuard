@@ -17,6 +17,10 @@ namespace MTWireGuard.Application.MinimalAPI
     {
         public static RouteGroupBuilder MapGeneralApi(this RouteGroupBuilder group)
         {
+            // Health check endpoints (no auth required)
+            group.MapGet("/health", HealthController.Health);
+            group.MapGet("/ready", HealthController.Ready);
+            
             // Retreive updates from Mikrotik
             group.MapPost(Endpoints.Usage, TrafficUsageUpdate);
             group.MapGet(Endpoints.IPLookup, IPLookup)

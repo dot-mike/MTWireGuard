@@ -1,0 +1,78 @@
+# Example Docker Compose for MTWireGuard with Reverse Proxy Support
+# This is a template - customize according to your needs
+
+version: '3.8'
+
+services:
+  # MTWireGuard Application
+  mtwireguard:
+    build: .
+    environment:
+      # Required Mikrotik configuration
+      - MT_IP=192.168.1.1          # Replace with your Mikrotik IP
+      - MT_USER=admin               # Replace with your Mikrotik username  
+      - MT_PASS=your_password       # Replace with your Mikrotik password
+      - MT_PUBLIC_IP=your.public.ip # Replace with your public IP
+      
+      # Reverse proxy configuration
+      - ASPNETCORE_ENVIRONMENT=Production
+      - UseHttpsRedirection=false   # Disable since TLS is handled by reverse proxy
+      
+      # Optional
+      - DATA_PATH=/data
+      - TZ=Europe/Berlin
+    
+    volumes:
+      - mtwireguard_data:/data
+    
+    networks:
+      - app-network
+    
+    # Uncomment if running without reverse proxy
+    # ports:
+    #   - "8080:8080"
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mtwireguard_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+
+# Example configurations for popular reverse proxies:
+
+# For Caddy (add to your Caddyfile):
+# mtwireguard.yourdomain.com {
+#     reverse_proxy mtwireguard:8080
+# }
+
+# For nginx (add to your nginx.conf):
+# server {
+#     listen 443 ssl;
+#     server_name mtwireguard.yourdomain.com;
+#     
+#     location / {
+#         proxy_pass http://mtwireguard:8080;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#         proxy_set_header X-Forwarded-Host $host;
+#     }
+# }
+
+# For Traefik (add these labels to the mtwireguard service):
+# labels:
+#   - "traefik.enable=true"
+#   - "traefik.http.routers.mtwireguard.rule=Host(`mtwireguard.yourdomain.com`)"
+#   - "traefik.http.routers.mtwireguard.entrypoints=websecure"
+#   - "traefik.http.routers.mtwireguard.tls.certresolver=myresolver"
+#   - "traefik.http.services.mtwireguard.loadbalancer.server.port=8080"
