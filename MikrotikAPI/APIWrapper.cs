@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace MikrotikAPI
 {
@@ -11,12 +13,19 @@ namespace MikrotikAPI
         private string MT_IP { get; set; }
         private string MT_USER { get; set; }
         private string MT_PASS { get; set; }
+        private bool MT_API_SSL { get; set; }
+        private bool IsVerboseLoggingEnabled { get; set; }
 
-        public APIWrapper(string IP, string User, string Password)
+        public APIWrapper(string IP, string User, string Password, bool useSSL = false)
         {
             MT_IP = IP;
             MT_USER = User;
             MT_PASS = Password;
+            MT_API_SSL = useSSL;
+            
+            // Check if verbose or debug logging is enabled
+            var loggingMode = Environment.GetEnvironmentVariable("LOGGING_MODE")?.ToLowerInvariant() ?? "info";
+            IsVerboseLoggingEnabled = loggingMode == "verbose" || loggingMode == "debug";
         }
 
         public async Task<List<Log>> GetLogsAsync()
@@ -145,6 +154,64 @@ namespace MikrotikAPI
         {
             var connection = await SendGetRequestAsync(Endpoints.Empty, true);
             return connection.ToModel<LoginStatus>();
+        }
+
+        public async Task<(bool success, string message)> ValidateAuthenticationAsync()
+        {
+            try
+            {
+                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Starting authentication validation");
+                
+                // First test basic connectivity without authentication
+                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Testing basic connectivity to /rest/");
+                var connectionTest = await SendGetRequestAsync(Endpoints.Empty, true);
+                var loginStatus = connectionTest.ToModel<LoginStatus>();
+                Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Basic connectivity response: {connectionTest}");
+                
+                if (loginStatus?.Error == 404)
+                {
+                    Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Router not found (404)");
+                    return (false, $"MikroTik router not found at {MT_IP}. Please check the MT_IP environment variable.");
+                }
+                
+                // Now test with authentication using system/resource endpoint (requires authentication)
+                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Testing authentication with /rest/system/resource");
+                var authTest = await SendGetRequestAsync(Endpoints.SystemResource);
+                Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Auth test response: {authTest}");
+                
+                // Check if response contains an error
+                if (authTest.Contains("\"error\":401") && authTest.Contains("\"message\":\"Unauthorized\""))
+                {
+                    Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: 401 Unauthorized detected - RETURNING FALSE");
+                    return (false, $"Authentication failed. Username '{MT_USER}' or password is incorrect. Please check MT_USER and MT_PASS environment variables.");
+                }
+                
+                if (authTest.Contains("\"error\":"))
+                {
+                    var errorStatus = authTest.ToModel<LoginStatus>();
+                    Console.WriteLine($"[DEBUG] ValidateAuthenticationAsync: Other error detected: {errorStatus?.Error} - {errorStatus?.Message}");
+                    return (false, $"MikroTik API error: [{errorStatus?.Error}] {errorStatus?.Message}");
+                }
+                
+                // If we get here and the response doesn't contain an error, authentication was successful
+                Console.WriteLine("[DEBUG] ValidateAuthenticationAsync: Authentication successful - RETURNING TRUE");
+                return (true, "Authentication successful");
+            }
+            catch (HttpRequestException ex)
+            {
+                string protocol = MT_API_SSL ? "HTTPS" : "HTTP";
+                string port = MT_API_SSL ? "443" : "80";
+                return (false, $"Cannot connect to MikroTik router at {MT_IP}:{port} using {protocol}. Error: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                string protocol = MT_API_SSL ? "HTTPS" : "HTTP";
+                return (false, $"Connection to MikroTik router at {MT_IP} using {protocol} timed out. Please check if the router is reachable and the correct protocol is being used.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Unexpected error while validating MikroTik connection: {ex.Message}");
+            }
         }
 
         public async Task<List<ActiveUser>> GetActiveSessions()
@@ -473,23 +540,106 @@ namespace MikrotikAPI
 
         private async Task<string> SendRequestBase(RequestMethod Method, string Endpoint, object? Data = null, bool IsTest = false)
         {
+            var stopwatch = Stopwatch.StartNew();
             HttpClientHandler handler = new()
             {
                 ServerCertificateCustomValidationCallback = (requestMessage, certificate, chain, policyErrors) => true
             };
-            using HttpClient httpClient = new(handler);
-            using var request = new HttpRequestMessage(new HttpMethod(Method.ToString()), $"https://{MT_IP}/rest/{Endpoint}");
-            string base64authorization = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{MT_USER}:{MT_PASS}"));
-            if (!IsTest) request.Headers.TryAddWithoutValidation("Authorization", $"Basic {base64authorization}");
-            if (Data != null)
+            
+            try
             {
-                string content = (Data is string @string) ? @string : JsonConvert.SerializeObject(Data);
-                request.Content = new StringContent(content);
-                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
-            }
+                using HttpClient httpClient = new(handler);
+                
+                // Use SSL (https) on port 443 if MT_API_SSL is true, otherwise use http on port 80
+                string protocol = MT_API_SSL ? "https" : "http";
+                string port = MT_API_SSL ? ":443" : ":80";
+                
+                // Don't add port if it's already specified in MT_IP
+                string baseUrl = MT_IP.Contains(":") ? $"{protocol}://{MT_IP}" : $"{protocol}://{MT_IP}{port}";
+                string fullUrl = $"{baseUrl}/rest/{Endpoint}";
+                
+                // Log the request if verbose logging is enabled
+                if (IsVerboseLoggingEnabled)
+                {
+                    if (Data != null)
+                    {
+                        string dataStr = (Data is string @string) ? @string : JsonConvert.SerializeObject(Data);
+                        Console.WriteLine($"[MikrotikAPI] {Method} request to {fullUrl} with data: {dataStr}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[MikrotikAPI] {Method} request to {fullUrl}");
+                    }
+                }
+                
+                using var request = new HttpRequestMessage(new HttpMethod(Method.ToString()), fullUrl);
+                string base64authorization = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{MT_USER}:{MT_PASS}"));
+                if (!IsTest) request.Headers.TryAddWithoutValidation("Authorization", $"Basic {base64authorization}");
+                if (Data != null)
+                {
+                    string content = (Data is string @string) ? @string : JsonConvert.SerializeObject(Data);
+                    request.Content = new StringContent(content);
+                    request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
+                }
 
-            HttpResponseMessage response = await httpClient.SendAsync(request);
-            return await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await httpClient.SendAsync(request);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                
+                stopwatch.Stop();
+                
+                // Log the response if verbose logging is enabled
+                if (IsVerboseLoggingEnabled)
+                {
+                    var truncatedResponse = responseContent.Length > 200 ? responseContent.Substring(0, 200) + "..." : responseContent;
+                    Console.WriteLine($"[MikrotikAPI] {Method} response from {fullUrl} ({stopwatch.ElapsedMilliseconds}ms): {truncatedResponse}");
+                }
+                
+                return responseContent;
+            }
+            catch (HttpRequestException ex)
+            {
+                stopwatch.Stop();
+                string sslInfo = MT_API_SSL ? "with SSL (HTTPS)" : "without SSL (HTTP)";
+                
+                if (IsVerboseLoggingEnabled)
+                {
+                    Console.WriteLine($"[MikrotikAPI] {Method} request to {MT_IP} failed after {stopwatch.ElapsedMilliseconds}ms - {ex.Message}");
+                }
+                
+                throw new HttpRequestException($"Failed to connect to Mikrotik API at {MT_IP} {sslInfo}. " +
+                    $"Error: {ex.Message}. " +
+                    $"Inner Exception: {ex.InnerException?.Message}", ex);
+            }
+            catch (TaskCanceledException ex)
+            {
+                stopwatch.Stop();
+                string sslInfo = MT_API_SSL ? "with SSL (HTTPS)" : "without SSL (HTTP)";
+                
+                if (IsVerboseLoggingEnabled)
+                {
+                    Console.WriteLine($"[MikrotikAPI] {Method} request to {MT_IP} timed out after {stopwatch.ElapsedMilliseconds}ms");
+                }
+                
+                throw new TaskCanceledException($"Connection to Mikrotik API at {MT_IP} {sslInfo} timed out. " +
+                    $"Error: {ex.Message}. " +
+                    $"Inner Exception: {ex.InnerException?.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                string sslInfo = MT_API_SSL ? "with SSL (HTTPS)" : "without SSL (HTTP)";
+                
+                if (IsVerboseLoggingEnabled)
+                {
+                    Console.WriteLine($"[MikrotikAPI] {Method} request to {MT_IP} failed after {stopwatch.ElapsedMilliseconds}ms - {ex.GetType().Name}: {ex.Message}");
+                }
+                
+                throw new Exception($"Unexpected error connecting to Mikrotik API at {MT_IP} {sslInfo}. " +
+                    $"Error Type: {ex.GetType().Name}. " +
+                    $"Error: {ex.Message}. " +
+                    $"Inner Exception: {ex.InnerException?.Message}. " +
+                    $"Stack Trace: {ex.StackTrace}", ex);
+            }
         }
 
         private async Task<string> SendGetRequestAsync(string URL, bool IsTest = false)

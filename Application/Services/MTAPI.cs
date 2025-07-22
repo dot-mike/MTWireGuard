@@ -22,6 +22,7 @@ namespace MTWireGuard.Application.Services
         private readonly APIWrapper wrapper;
         private readonly ILogger logger;
         private readonly string MT_IP, MT_USER, MT_PASS;
+        private readonly bool MT_API_SSL;
         private bool disposed = false;
         public MTAPI(IMapper mapper, DBContext dbContext, ILogger logger)
         {
@@ -32,7 +33,11 @@ namespace MTWireGuard.Application.Services
             MT_IP = Environment.GetEnvironmentVariable("MT_IP");
             MT_USER = Environment.GetEnvironmentVariable("MT_USER");
             MT_PASS = Environment.GetEnvironmentVariable("MT_PASS");
-            wrapper = new(MT_IP, MT_USER, MT_PASS);
+            
+            // Parse MT_API_SSL environment variable, default to false
+            MT_API_SSL = bool.TryParse(Environment.GetEnvironmentVariable("MT_API_SSL"), out bool useSSL) && useSSL;
+            
+            wrapper = new(MT_IP, MT_USER, MT_PASS, MT_API_SSL);
         }
         public async Task<List<LogViewModel>> GetLogsAsync()
         {
@@ -307,16 +312,27 @@ namespace MTWireGuard.Application.Services
         {
             try
             {
-                var model = await wrapper.TryConnectAsync();
-                if ((model.Error == 400 && model.Message == "Bad Request") || (model.Error == 401 && model.Message == "Unauthorized"))
+                var (success, message) = await wrapper.ValidateAuthenticationAsync();
+                if (!success)
                 {
-                    return true;
+                    throw new Exception(message);
                 }
-                throw new($"[{model.Error}] Login failed, {model.Message}.<br>Enter router username/password in environment variables (MT_USER/MT_PASS).");
+                return true;
             }
             catch (Exception ex)
             {
-                throw new($"Login failed, {ex.Message}");
+                // Preserve the full exception chain for better debugging
+                var errorMessage = $"Login failed, {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $" Inner Exception: {ex.InnerException.Message}";
+                }
+                if (ex.InnerException?.InnerException != null)
+                {
+                    errorMessage += $" Root Cause: {ex.InnerException.InnerException.Message}";
+                }
+                
+                throw new Exception(errorMessage, ex);
             }
         }
         public async Task<List<ActiveUserViewModel>> GetActiveSessions()

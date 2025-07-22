@@ -460,7 +460,7 @@ $(function () {
             return;
         }).finally(() => {
             dt_basic.ajax.reload();
-            new bootstrap.Modal('#RemoveModal').hide();
+            bootstrap.Modal.getInstance(document.getElementById('RemoveModal')).hide();
         });
     });
 
@@ -480,7 +480,7 @@ $(function () {
                     return;
                 }).finally(() => {
                     dt_basic.ajax.reload();
-                    (new bootstrap.Modal('#ImportModal')).hide();
+                    bootstrap.Modal.getInstance(document.getElementById('ImportModal')).hide();
                 });
             } catch (error) {
                 console.error('Invalid JSON:', error);

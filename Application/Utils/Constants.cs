@@ -49,12 +49,17 @@ namespace MTWireGuard.Application.Utils
 
         public static string DataPath()
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Path.Join("/home", "app") : Path.Join(AppDomain.CurrentDomain.BaseDirectory);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var dataPath = Environment.GetEnvironmentVariable("DATA_PATH");
+                return string.IsNullOrEmpty(dataPath) ? "/data" : dataPath;
+            }
+            return AppDomain.CurrentDomain.BaseDirectory;
         }
 
         public static string DataPath(string filename)
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Path.Join("/home", "app", filename) : Path.Join(AppDomain.CurrentDomain.BaseDirectory, filename);
+            return Path.Join(DataPath(), filename);
         }
     }
 }

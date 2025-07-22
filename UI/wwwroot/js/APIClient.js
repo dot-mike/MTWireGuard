@@ -185,7 +185,7 @@ class APIClient {
 
             auth: {
                 Login: () => { return `${auth}/login`; },
-                Logout: () => { `${auth}/logout`; },
+                Logout: () => { return `${auth}/logout`; },
             },
             users: {
                 Single: (userId) => { return `${users}/${userId}`; },

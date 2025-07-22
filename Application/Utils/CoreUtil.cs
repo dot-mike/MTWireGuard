@@ -28,29 +28,27 @@ namespace MTWireGuard.Application.Utils
         /// <returns></returns>
         public static string GetLogPath(string filename) => Path.Join(Constants.DataPath(), "logs", filename);
 
-        public static string GetIDFile() => Constants.DataPath("identifier.id");
-        public static string GetIDContent()
-        {
-            var idFile = GetIDFile();
-
-            if (!File.Exists(idFile))
-            {
-                using var fs = File.OpenWrite(idFile);
-                var id = Guid.NewGuid().ToString();
-                id = id[(id.LastIndexOf('-') + 1)..];
-                byte[] identifier = new UTF8Encoding(true).GetBytes(id);
-                fs.Write(identifier, 0, identifier.Length);
-            }
-            return File.ReadAllText(idFile);
-        }
-
         /// <summary>
         /// Serilog configuration
         /// </summary>
         /// <returns></returns>
         public static Serilog.Core.Logger LoggerConfiguration()
         {
+            var loggingMode = Environment.GetEnvironmentVariable("LOGGING_MODE")?.ToLowerInvariant() ?? "info";
+            
+            var minimumLevel = loggingMode switch
+            {
+                "debug" => LogEventLevel.Debug,
+                "verbose" => LogEventLevel.Verbose,
+                "info" => LogEventLevel.Information,
+                "warning" => LogEventLevel.Warning,
+                "error" => LogEventLevel.Error,
+                "fatal" => LogEventLevel.Fatal,
+                _ => LogEventLevel.Information
+            };
+
             return new LoggerConfiguration()
+                .MinimumLevel.Is(minimumLevel)
                 .Enrich.WithExceptionDetails(new DestructuringOptionsBuilder()
                     .WithDefaultDestructurers()
                     .WithRootName("Message").WithRootName("Exception").WithRootName("Exception"))
@@ -60,9 +58,9 @@ namespace MTWireGuard.Application.Utils
                     prefix: "Log.Source_",
                     filePathDepth: 10)
                 .Enrich.WithProperty("App.Version", GetProjectVersion())
+                .Enrich.WithProperty("LoggingMode", loggingMode)
                 .Enrich.WithMachineName()
                 .Enrich.WithEnvironmentUserName()
-                .Enrich.WithClientId(GetIDContent())
                 .WriteTo.Logger(lc => lc
                     .Filter.ByExcluding(AspNetCoreRequestLogging())
                     .WriteTo.SQLite(GetLogPath("logs.db")))
@@ -73,9 +71,6 @@ namespace MTWireGuard.Application.Utils
                         rollingInterval: RollingInterval.Day,
                         retainedFileCountLimit: 31
                     ))
-                .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly(LogEvent => LogEvent.Exception != null)
-                    .WriteTo.Seq("https://mtwglogger.techgarage.ir/"))
                 .CreateLogger();
         }
 

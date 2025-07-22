@@ -5,11 +5,11 @@
 <br />
 <div align="center">
 
-[![GitHub Stars](https://img.shields.io/github/stars/techgarage-ir/MTWireGuard.svg)](https://github.com/techgarage-ir/MTWireGuard/stargazers)
-[![GitHub Issues](https://img.shields.io/github/issues/techgarage-ir/MTWireGuard.svg)](https://github.com/techgarage-ir/MTWireGuard/issues)
-[![Current Version](https://img.shields.io/docker/v/techgarageir/mtwireguard)](https://github.com/techgarage-ir/MTWireGuard)
+[![GitHub Stars](https://img.shields.io/github/stars/dot-mike/MTWireGuard.svg)](https://github.com/dot-mike/MTWireGuard/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/dot-mike/MTWireGuard.svg)](https://github.com/dot-mike/MTWireGuard/issues)
+[![Current Version](https://img.shields.io/docker/v/techgarageir/mtwireguard)](https://github.com/dot-mike/MTWireGuard)
   
-  <a href="https://github.com/techgarage-ir/MTWireGuard">
+  <a href="https://github.com/dot-mike/MTWireGuard">
     <img src="/Photos/logo.png" alt="Logo" width="400">
   </a>
 
@@ -18,12 +18,9 @@
   <p align="center">
     An awesome way to manage Mikrotik Wireguard interface!
     <br />
-    <a href="https://github.com/techgarage-ir/MTWireGuard/wiki"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/techgarage-ir/MTWireGuard/issues/new?labels=bug">Report Bug</a>
+    <a href="https://github.com/dot-mike/MTWireGuard/issues/new?labels=bug">Report Bug</a>
     ·
-    <a href="https://github.com/techgarage-ir/MTWireGuard/issues/new?labels=enhancement">Request Feature</a>
+    <a href="https://github.com/dot-mike/MTWireGuard/issues/new?labels=enhancement">Request Feature</a>
   </p>
 </div>
 
@@ -54,22 +51,10 @@
   </ol>
 </details>
 
-
-### Donations
-If you found this project helpful and want to support its development, consider making a donation:
-
-* <img width="24" alt="BTC"  src="https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=040" /> **BTC**: `bc1qdpplplhmw5fmk66czm0ew9rg4eev98u9gall2w`
-* <img width="24" alt="USDT" src="https://cryptologos.cc/logos/tether-usdt-logo.svg?v=040" /> **USDT (TRC20)**: `TX4uYnWSjmVAYGB2zoBZq95a9Q4RX9mRhS`
-* <img width="24" alt="SOL"  src="https://cryptologos.cc/logos/solana-sol-logo.svg?v=040" />  **SOL**: `3hwQaAUVsA1fviC2cDD7cpMCzoj1P8kuhnZNA4FKuS2g`
-* <img width="24" alt="TON"  src="https://cryptologos.cc/logos/toncoin-ton-logo.svg?v=040" /> **TON**: `UQAJFLfAV-bNc_kIoVbV6w447z__vzJFTFrW30Q04QCGvV9d`
-
-Your support helps maintain and improve this project. Thank you!
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![MTWireguard screenshot][product-screenshot]](https://github.com/techgarage-ir/MTWireGuard)
+[![MTWireguard screenshot][product-screenshot]](https://github.com/dot-mike/MTWireGuard)
 
 This is the first and most **Stable** and **Secure** Accounting system built to manage Wireguard interface on Mikrotik (CHR and devices). You can easily make a Virtual Private Network based on Wireguard protocol in your RouterOS device.
 
@@ -122,6 +107,24 @@ _As of this project is based on docker, you can install on any OS that can run d
 #### Method 2
 Installing on VPS using docker
 
+#### Method 3
+**Reverse Proxy Setup with TLS (Caddy/nginx/Traefik)**
+
+MTWireGuard supports running behind reverse proxies with TLS termination. This is recommended for production deployments.
+
+See the [Reverse Proxy Setup Guide](docs/reverse-proxy-setup.md) for detailed configuration examples with:
+- Caddy
+- nginx  
+- Traefik
+
+Quick start with reverse proxy:
+```bash
+# Use the reverse proxy docker-compose template
+cp docker-compose.reverse-proxy.yml docker-compose.yml
+# Edit the configuration for your environment
+docker-compose up -d
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
@@ -129,7 +132,7 @@ Installing on VPS using docker
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-_For examples, please refer to the [Documentation](https://github.com/techgarage-ir/MTWireGuard/wiki)_
+_For examples, please refer to the [Documentation](https://github.com/dot-mike/MTWireGuard/wiki)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -146,7 +149,7 @@ _For examples, please refer to the [Documentation](https://github.com/techgarage
 - [ ] Add backup-restore configuration
 - [ ] Add bandwidth limit
 
-See the [open issues](https://github.com/techgarage-ir/MTWireGuard/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/dot-mike/MTWireGuard/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -168,8 +171,8 @@ Don't forget to give the project a star! Thanks again!
 
 ### Top contributors:
 
-<a href="https://github.com/techgarage-ir/MTWireGuard/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=techgarage-ir/MTWireGuard" alt="contrib.rocks image" />
+<a href="https://github.com/dot-mike/MTWireGuard/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=dot-mike/MTWireGuard" alt="contrib.rocks image" />
 </a>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -185,17 +188,6 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 
 
-<!-- CONTACT -->
-## Contact
-
-[![Telegram Channel][Telegram-Channel]](https://t.me/MTWireguard)
-
-[![Telegram Group][Telegram-Group]](https://t.me/MTWireguardGroup)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [product-screenshot]: /Photos/screenshot.png
@@ -206,7 +198,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 [.Net]: https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white
 [.Net-url]: https://dotnet.microsoft.com/
 [GitHub-Actions]: https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white
-[GitHub-Actions-url]: https://github.com/techgarage-ir/MTWireGuard/actions
+[GitHub-Actions-url]: https://github.com/dot-mike/MTWireGuard/actions
 [SQLite]: https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white
 [SQLite-url]: https://reactjs.org/
 [Docker]: https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white

@@ -18,31 +18,21 @@ namespace MTWireGuard.Application.MinimalAPI
 {
     internal class AuthController
     {
-        public static async Task<Results<SignInHttpResult, UnauthorizedHttpResult, ProblemHttpResult>> Login([FromBody] LoginRequest login)
+        public static Results<SignInHttpResult, UnauthorizedHttpResult, ProblemHttpResult> Login([FromBody] LoginRequest login)
         {
             try
             {
-                string MT_IP = Environment.GetEnvironmentVariable("MT_IP");
-                string MT_USER = Environment.GetEnvironmentVariable("MT_USER");
-                string MT_PASS = Environment.GetEnvironmentVariable("MT_PASS") ?? "";
+                // GUI Admin credentials (separate from MikroTik API)
+                string GUI_ADMIN_USER = Environment.GetEnvironmentVariable("GUI_ADMIN_USER") ?? "admin";
+                string GUI_ADMIN_PASS = Environment.GetEnvironmentVariable("GUI_ADMIN_PASS") ?? "admin";
 
-                if (login.Username == MT_USER && login.Password == MT_PASS)
+                // Validate GUI admin credentials only
+                if (login.Username == GUI_ADMIN_USER && login.Password == GUI_ADMIN_PASS)
                 {
-                    HttpClientHandler handler = new()
-                    {
-                        ServerCertificateCustomValidationCallback = delegate { return true; }
-                    };
-                    using HttpClient httpClient = new(handler);
-                    using var request = new HttpRequestMessage(new HttpMethod("GET"), $"https://{MT_IP}/rest/");
-                    string base64authorization = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{MT_USER}:{MT_PASS}"));
-                    request.Headers.TryAddWithoutValidation("Authorization", $"Basic {base64authorization}");
-
-                    HttpResponseMessage response = await httpClient.SendAsync(request);
-                    var resp = await response.Content.ReadAsStringAsync();
-
                     var claims = new List<Claim>
                     {
                         new(ClaimTypes.Role, "Administrator"),
+                        new(ClaimTypes.Name, login.Username),
                     };
 
                     var claimsIdentity = new ClaimsIdentity(

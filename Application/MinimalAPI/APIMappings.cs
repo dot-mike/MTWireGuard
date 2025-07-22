@@ -17,6 +17,10 @@ namespace MTWireGuard.Application.MinimalAPI
     {
         public static RouteGroupBuilder MapGeneralApi(this RouteGroupBuilder group)
         {
+            // Health check endpoints (no auth required)
+            group.MapGet("/health", HealthController.Health);
+            group.MapGet("/ready", HealthController.Ready);
+            
             // Retreive updates from Mikrotik
             group.MapPost(Endpoints.Usage, TrafficUsageUpdate);
             group.MapGet(Endpoints.IPLookup, IPLookup)
@@ -165,7 +169,7 @@ namespace MTWireGuard.Application.MinimalAPI
         {
             try
             {
-                var url = "https://api.github.com/repos/techgarage-ir/MTWireguard/tags";
+                var url = "https://api.github.com/repos/dot-mike/MTWireguard/tags";
                 var currentVersionString = CoreUtil.GetProjectVersion();
                 using var httpClient = new HttpClient();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", $"MTWireguard ${currentVersionString}");

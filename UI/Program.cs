@@ -4,31 +4,133 @@ using MTWireGuard.Application.Utils;
 using MTWireGuard.Middlewares;
 using Serilog;
 using Serilog.Ui.Web.Extensions;
+using Microsoft.AspNetCore.HttpOverrides;
 
 internal class Program
 {
-    public static bool isValid {  get; private set; }
-    public static string validationMessage { get; private set; }
+    public static bool isValid { get; private set; }
+    public static string? validationMessage { get; private set; }
 
-    private static async Task Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        try
+        {
+            Console.WriteLine("MTWireGuard - Starting...");
+
+            // Load .env file before any other initialization
+            var root = Directory.GetCurrentDirectory();
+            var dotenv = Path.Combine(root, ".env");
+            MTWireGuard.Application.Utils.DotEnv.Load(dotenv);
+
+            var builder = WebApplication.CreateBuilder(args);
+            
+            // Explicitly add environment variables to configuration
+            builder.Configuration.AddEnvironmentVariables();
+            
+            // Configure services
+            ConfigureServices(builder);
+
+            var app = builder.Build();
+
+            // Initialize and validate using SetupValidator
+            var serviceScope = app.Services.CreateScope().ServiceProvider;
+            var validator = new SetupValidator(serviceScope);
+            
+            // Validate environment variables and Mikrotik connection
+            isValid = await validator.Validate();
+            
+            if (!isValid)
+            {
+                Console.WriteLine("Application startup failed!");
+                return 1; // Exit with error code
+            }
+
+            // Configure middleware pipeline
+            ConfigureMiddleware(app);
+            
+            // Configure application lifetime events
+            ConfigureApplicationLifetime(app);
+            
+            // Start the application
+            await app.RunAsync();
+            
+            return 0; // Success
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Critical startup error: {ex.Message}");
+            Console.ResetColor();
+            
+            // Try to log the error if possible
+            try
+            {
+                Log.Fatal(ex, "Application terminated unexpectedly during startup");
+            }
+            catch
+            {
+                // If logging fails, just continue
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+            
+            return 1; // Exit with error code
+        }
+    }
+
+    private static void ConfigureServices(WebApplicationBuilder builder)
+    {
         builder.Services.AddControllersWithViews();
         builder.Services.AddExceptionHandler<ExceptionHandler>();
         builder.Services.AddProblemDetails();
         builder.Services.AddApplicationServices();
 
         builder.Host.UseSerilog(CoreUtil.LoggerConfiguration());
+    }
 
-        var app = builder.Build();
+    private static void ConfigureApplicationLifetime(WebApplication app)
+    {
+        var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+        var logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+        
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            var urls = app.Configuration["ASPNETCORE_HTTP_PORTS"]?.Split(';')
+                .Select(port => $"http://localhost:{port}")
+                .FirstOrDefault() ?? "http://localhost:8080";
+                
+            Console.WriteLine($"Application started successfully at: {urls}");
+            logger.LogInformation("Application started successfully at: {Url}", urls);
+        });
+        
+        lifetime.ApplicationStopping.Register(() =>
+        {
+            Console.WriteLine("Application is shutting down...");
+            logger.LogInformation("Application shutdown initiated");
+        });
+        
+        lifetime.ApplicationStopped.Register(() =>
+        {
+            Console.WriteLine("Application stopped gracefully.");
+            logger.LogInformation("Application stopped gracefully");
+            Log.CloseAndFlush();
+        });
+    }
 
-        app.UseHttpsRedirection();
+    private static void ConfigureMiddleware(WebApplication app)
+    {
+        app.UseForwardedHeaders();
 
-        var serviceScope = app.Services.CreateScope().ServiceProvider;
-
-        // Validate Prerequisite
-        var validator = new SetupValidator(serviceScope);
-        isValid = await validator.Validate();
+        // Only redirect to HTTPS if not behind a reverse proxy
+        var shouldUseHttpsRedirection = !app.Environment.IsDevelopment() && 
+            app.Configuration.GetValue<bool>("UseHttpsRedirection", true);
+            
+        if (shouldUseHttpsRedirection)
+        {
+            app.UseHttpsRedirection();
+        }
 
         if (!app.Environment.IsDevelopment())
         {
@@ -57,6 +159,10 @@ internal class Program
 
         app.MapRazorPages();
 
+        // Health check endpoints (outside /api for standard compliance)
+        app.MapGet("/health", MTWireGuard.Application.MinimalAPI.HealthController.Health);
+        app.MapGet("/ready", MTWireGuard.Application.MinimalAPI.HealthController.Ready);
+
         app.UseWebSockets();
 
         app.
@@ -80,7 +186,5 @@ internal class Program
             options.WithAuthenticationType(Serilog.Ui.Web.Models.AuthenticationType.Custom);
             options.EnableAuthorizationOnAppRoutes();
         });
-
-        app.Run();
     }
 }

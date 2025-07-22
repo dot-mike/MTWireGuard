@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using MTWireGuard.Application.Mapper;
 using MTWireGuard.Application.Repositories;
@@ -104,6 +105,9 @@ namespace MTWireGuard.Application
 
                 options.AddScopedSyncAuthFilter<SerilogUiAuthorizeFilter>();
             });
+
+            // Add application lifetime service
+            services.AddHostedService<ApplicationLifetimeService>();
         }
     }
 }
