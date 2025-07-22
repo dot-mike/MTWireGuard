@@ -26,6 +26,7 @@ Before running MTWireGuard, you need to configure these essential environment va
 | `ASPNETCORE_ENVIRONMENT` | Application environment | `Production` | ❌ |
 | `DATA_PATH` | Data directory path | `/data` | ❌ |
 | `TZ` | Timezone | `Europe/Berlin` | ❌ |
+| `LOGGING_MODE` | Application logging level | `info`, `debug`, `verbose` | ❌ |
 
 ## 🐳 Method 1: Docker Compose (Recommended)
 
@@ -50,6 +51,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - DATA_PATH=/data
       - TZ=Europe/Berlin
+      - LOGGING_MODE=info
     
     ports:
       - "8080:8080"
@@ -178,6 +180,7 @@ docker run -d \
   -e GUI_ADMIN_USER=admin \
   -e GUI_ADMIN_PASS=admin123 \
   -e ASPNETCORE_ENVIRONMENT=Development \
+  -e LOGGING_MODE=debug \
   -v mtwireguard_data:/data \
   mtwireguard:dev
 ```
@@ -280,6 +283,7 @@ MT_API_SSL=false
 ASPNETCORE_ENVIRONMENT=Production
 DATA_PATH=/data
 TZ=Europe/Berlin
+LOGGING_MODE=info
 
 # Optional: Disable HTTPS redirection for reverse proxy
 UseHttpsRedirection=false
